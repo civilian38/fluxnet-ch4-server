@@ -10,4 +10,5 @@ urlpatterns = [
 
     # api
     path('api/authentication/', include('authentication.urls')),
+    path('api/showcase/', include('showcase.urls'))
 ]
