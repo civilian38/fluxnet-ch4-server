@@ -9,7 +9,9 @@ click-repl==0.3.0
 Django==6.0.4
 djangorestframework==3.17.1
 djangorestframework_simplejwt==5.5.1
+drf-yasg==1.21.15
 gunicorn==25.3.0
+inflection==0.5.1
 kombu==5.6.2
 packaging==26.0
 prompt_toolkit==3.0.52
@@ -17,11 +19,14 @@ psycopg2-binary==2.9.11
 PyJWT==2.12.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
+pytz==2026.1.post1
+PyYAML==6.0.3
 redis==6.4.0
 six==1.17.0
 sqlparse==0.5.5
 tzdata==2026.1
 tzlocal==5.3.1
+uritemplate==4.2.0
 vine==5.1.0
 wcwidth==0.6.0
 whitenoise==6.12.0
