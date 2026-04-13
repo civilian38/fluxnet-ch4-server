@@ -35,5 +35,5 @@ class LatestDataRetrieveView(RetrieveAPIView):
 
     def get_object(self):
         location_id = self.kwargs.get('location_id')
-        obj = CH4Data.objects.get(id=location_id)
+        obj = CH4Data.objects.filter(location=location_id).first()
         return obj
