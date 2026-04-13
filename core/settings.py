@@ -38,7 +38,8 @@ ALLOWED_HOSTS = [
 CORS_ORIGIN_ALLOW_ALL = True
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://localhost:8000'
+    'https://localhost:8000',
+    'https://fluxnet-server-c4g0fbamd6cdhzdf.koreacentral-01.azurewebsites.net'
 ]
 
 # Application definition
