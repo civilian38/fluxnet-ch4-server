@@ -24,7 +24,7 @@ urlpatterns = [
 
     # api
     path('api/authentication/', include('authentication.urls')),
-    path('api/showcase/', include('showcase.urls')),
+    # path('api/showcase/', include('showcase.urls')),
 
     # swagger
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
