@@ -8,6 +8,9 @@ class Location(models.Model):
     def __str__(self):
         return f"{self.name} ({self.point.y}, {self.point.x})"
 
+    def get_coordinates(self):
+        return self.point.y, self.point.x
+
 class WeeklyEnvironmentData(models.Model):
     # Location 테이블과의 1:N 관계 설정
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='weekly_data')
@@ -28,9 +31,9 @@ class WeeklyEnvironmentData(models.Model):
     netrad = models.FloatField(help_text="순 복사량 (W/m^2)")
 
     # --- 위성 데이터 (Sentinel-1) ---
-    vv = models.FloatField(null=True, blank=True, help_text="VV 편파 평균")
-    vh = models.FloatField(null=True, blank=True, help_text="VH 편파 평균")
-    sdwi = models.FloatField(null=True, blank=True, help_text="수분 지수 (SDWI)")
+    vv = models.FloatField(help_text="VV 편파 평균")
+    vh = models.FloatField(help_text="VH 편파 평균")
+    sdwi = models.FloatField(help_text="수분 지수 (SDWI)")
 
     created_at = models.DateTimeField(auto_now_add=True)
 
