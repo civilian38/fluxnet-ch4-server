@@ -24,6 +24,7 @@ urlpatterns = [
 
     # api
     path('api/authentication/', include('authentication.urls')),
+    path('api/prediction/', include('prediction.urls')),
     # path('api/showcase/', include('showcase.urls')),
 
     # swagger

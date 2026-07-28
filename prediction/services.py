@@ -14,6 +14,7 @@ from google.oauth2 import service_account
 
 from django.db import transaction
 from .models import Location, WeeklyEnvironmentData
+from django.apps import apps
 
 def preprocess(target_date: datetime.date):
     tqdm.pandas()
@@ -287,3 +288,39 @@ def preprocess(target_date: datetime.date):
         if os.path.exists(TEMP_DIR):
             shutil.rmtree(TEMP_DIR)
             print(f"\n임시 디렉토리 정리 완료: {TEMP_DIR}")
+
+def predict_ch4_for_instance(env_data_instance: WeeklyEnvironmentData):
+    # 1. Django에 등록된 앱 인스턴스를 가져옵니다. 
+    app_config = apps.get_app_config('prediction') 
+    
+    # 2. 해당 인스턴스에 로드된 모델을 꺼냅니다.
+    model = app_config.ml_model
+
+    if model is None:
+        raise ValueError("모델이 로드되지 않았습니다.")
+    # 2. 모델이 기대하는 피처 순서 확인
+    feature_cols = list(model.feature_names_in_)
+
+    # 3. Django DB 인스턴스의 데이터를 딕셔너리로 매핑 
+    data_dict = {'NETRAD': env_data_instance.netrad,
+        'WS': env_data_instance.ws,
+        'G': env_data_instance.g,
+        'PA': env_data_instance.pa,
+        'TA': env_data_instance.ta,
+        'VPD': env_data_instance.vpd,
+        'P': env_data_instance.p,
+        'TS_1': env_data_instance.ts_1,
+        'TS_2': env_data_instance.ts_2,
+        'VV': env_data_instance.vv,
+        'VH': env_data_instance.vh,
+        'SDWI': env_data_instance.sdwi,
+    }
+
+    # 4. DataFrame 생성 및 피처 순서 강제 정렬
+    df = pd.DataFrame([data_dict])
+    X = df[feature_cols] # 순서 보장
+
+    # 5. 예측
+    pred_value = model.predict(X)
+    
+    return pred_value[0] # 단일 값이므로 첫 번째 요소 반환
