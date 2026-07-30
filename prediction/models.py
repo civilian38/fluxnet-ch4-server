@@ -45,3 +45,11 @@ class WeeklyEnvironmentData(models.Model):
 
     def __str__(self):
         return f"{self.location} | {self.start_date} ~ {self.end_date}"
+    
+class CH4PredictionValue(models.Model):
+    env_data = models.OneToOneField(WeeklyEnvironmentData, on_delete=models.CASCADE, related_name='prediction_value')
+    value = models.FloatField()
+    timestamp = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.env_data} | CH4: {self.value}"

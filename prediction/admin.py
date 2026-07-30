@@ -1,11 +1,15 @@
-from django import forms
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
+from django import forms
 from django.contrib.gis.geos import Point
-from .models import Location, WeeklyEnvironmentData
+
+# models.py에서 정의한 모델들을 가져옵니다. (앱 이름에 맞춰 경로를 수정하세요)
+from .models import Location, WeeklyEnvironmentData, CH4PredictionValue
 
 
-# 1. Location 전용 커스텀 Form 생성
+# ==========================================
+# 1. Location Admin (요청하신 코드 유지)
+# ==========================================
 class LocationAdminForm(forms.ModelForm):
     # 숫자를 직접 입력할 수 있는 커스텀 필드 추가
     latitude = forms.FloatField(
@@ -60,7 +64,6 @@ class LocationAdminForm(forms.ModelForm):
         return cleaned_data
 
 
-# 2. LocationAdmin에 Form 적용
 @admin.register(Location)
 class LocationAdmin(GISModelAdmin):
     form = LocationAdminForm  # 위에서 만든 폼 적용
@@ -87,18 +90,69 @@ class LocationAdmin(GISModelAdmin):
     display_coordinates.short_description = '좌표 (위도, 경도)'
 
 
-# WeeklyEnvironmentDataAdmin은 이전 코드 그대로 유지
+# ==========================================
+# 2. WeeklyEnvironmentData Admin
+# ==========================================
+class CH4PredictionValueInline(admin.StackedInline):
+    """
+    WeeklyEnvironmentData 안에서 CH4PredictionValue를 
+    한 번에 조회 및 수정할 수 있도록 해주는 인라인 설정
+    """
+    model = CH4PredictionValue
+    extra = 0
+
+
 @admin.register(WeeklyEnvironmentData)
 class WeeklyEnvironmentDataAdmin(admin.ModelAdmin):
-    list_display = ('location', 'start_date', 'end_date', 'ta', 'p', 'sdwi', 'created_at')
+    # 목록에서 보여줄 주요 데이터
+    list_display = ('location', 'start_date', 'end_date', 'ta', 'p', 'created_at')
+    
+    # 우측 필터 옵션
     list_filter = ('location', 'start_date')
+    
+    # 상단 검색 바 (장소 이름 기준)
     search_fields = ('location__name',)
+    
+    # 날짜별 계층적 탐색 네비게이션
     date_hierarchy = 'start_date'
-    readonly_fields = ('created_at',)
-
+    
+    # 예측값을 같이 볼 수 있도록 인라인 추가
+    inlines = [CH4PredictionValueInline]
+    
+    # 관리자 페이지 상세 화면에서 필드들을 그룹화하여 깔끔하게 표시
     fieldsets = (
-        ('기본 정보', {'fields': ('location', 'start_date', 'end_date')}),
-        ('기상 데이터 (ERA5)', {'fields': ('ws', 'ta', 'ts_1', 'ts_2', 'g', 'pa', 'p', 'vpd', 'netrad')}),
-        ('위성 데이터 (Sentinel-1)', {'fields': ('vv', 'vh', 'sdwi')}),
-        ('메타 정보', {'fields': ('created_at',), 'classes': ('collapse',)}),
+        ('기본 정보', {
+            'fields': ('location', 'start_date', 'end_date')
+        }),
+        ('기상 데이터 (ERA5)', {
+            'fields': ('ws', 'ta', 'ts_1', 'ts_2', 'g', 'pa', 'p', 'vpd', 'netrad'),
+            'classes': ('collapse',),  # 접었다 펼 수 있게 설정
+        }),
+        ('위성 데이터 (Sentinel-1)', {
+            'fields': ('vv', 'vh', 'sdwi'),
+            'classes': ('collapse',),
+        }),
     )
+
+
+# ==========================================
+# 3. CH4PredictionValue Admin
+# ==========================================
+@admin.register(CH4PredictionValue)
+class CH4PredictionValueAdmin(admin.ModelAdmin):
+    # 연관된 환경 데이터의 장소와 날짜를 목록에 함께 표시
+    list_display = ('get_location', 'get_start_date', 'value', 'timestamp')
+    list_filter = ('timestamp', 'env_data__location')
+    search_fields = ('env_data__location__name',)
+
+    # 목록에서 장소명(Location)을 바로 볼 수 있도록 하는 커스텀 메서드
+    def get_location(self, obj):
+        return obj.env_data.location.name
+    get_location.short_description = '측정 장소'
+    get_location.admin_order_field = 'env_data__location'
+
+    # 목록에서 환경 데이터의 시작일을 바로 볼 수 있도록 하는 커스텀 메서드
+    def get_start_date(self, obj):
+        return obj.env_data.start_date
+    get_start_date.short_description = '시작 날짜'
+    get_start_date.admin_order_field = 'env_data__start_date'

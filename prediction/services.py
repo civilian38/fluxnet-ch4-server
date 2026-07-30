@@ -13,7 +13,7 @@ import json
 from google.oauth2 import service_account
 
 from django.db import transaction
-from .models import Location, WeeklyEnvironmentData
+from .models import Location, WeeklyEnvironmentData, CH4PredictionValue
 from django.apps import apps
 
 def preprocess(target_date: datetime.date):
@@ -258,11 +258,14 @@ def preprocess(target_date: datetime.date):
     # 7. Django 데이터베이스(WeeklyEnvironmentData)에 저장
     # ============================================================================
     print("\n데이터베이스에 결과를 저장합니다...")
+    
+    # 결과를 담을 리스트 초기화
+    processed_objects = [] 
 
     try:
         with transaction.atomic():
             for _, row in df_weekly.iterrows():
-                WeeklyEnvironmentData.objects.update_or_create(
+                obj, created = WeeklyEnvironmentData.objects.update_or_create(
                     location_id=row['location_id'],
                     start_date=row['TIMESTAMP_START'].date(),
                     defaults={
@@ -281,13 +284,18 @@ def preprocess(target_date: datetime.date):
                         'sdwi': row['SDWI'],
                     }
                 )
-        print("\n최종 전처리 및 DB 저장 완료.")
+                
+                processed_objects.append(obj)
+
+        print(f"\n최종 전처리 및 DB 저장 완료. (총 {len(processed_objects)}개 저장)")
 
     finally:
         # 임시 디렉토리 정리 (shutil 사용)
         if os.path.exists(TEMP_DIR):
             shutil.rmtree(TEMP_DIR)
             print(f"\n임시 디렉토리 정리 완료: {TEMP_DIR}")
+
+    return processed_objects
 
 def predict_ch4_for_instance(env_data_instance: WeeklyEnvironmentData):
     # 1. Django에 등록된 앱 인스턴스를 가져옵니다. 
@@ -324,3 +332,70 @@ def predict_ch4_for_instance(env_data_instance: WeeklyEnvironmentData):
     pred_value = model.predict(X)
     
     return pred_value[0] # 단일 값이므로 첫 번째 요소 반환
+
+def update_ch4_for_locations(date: datetime.date):
+    # 1. 환경 데이터 전처리 및 인스턴스 획득
+    env_data = preprocess(date)
+    
+    if not env_data:
+        print("전처리된 환경 데이터가 없습니다.")
+        return
+
+    # 2. 모델 로드 (반복문 밖에서 한 번만 실행)
+    app_config = apps.get_app_config('prediction') 
+    model = app_config.ml_model
+
+    if model is None:
+        raise ValueError("모델이 로드되지 않았습니다.")
+        
+    feature_cols = list(model.feature_names_in_)
+
+    # 3. 모델 예측을 위한 데이터프레임 일괄(Batch) 구성
+    data_dicts = []
+    for instance in env_data:
+        data_dicts.append({
+            'env_data_id': instance.id,  # 나중에 매핑하기 위한 키
+            'NETRAD': instance.netrad,
+            'WS': instance.ws,
+            'G': instance.g,
+            'PA': instance.pa,
+            'TA': instance.ta,
+            'VPD': instance.vpd,
+            'P': instance.p,
+            'TS_1': instance.ts_1,
+            'TS_2': instance.ts_2,
+            'VV': instance.vv,
+            'VH': instance.vh,
+            'SDWI': instance.sdwi,
+        })
+
+    df = pd.DataFrame(data_dicts)
+    X = df[feature_cols]  # 모델이 학습될 때와 동일한 컬럼 순서 보장
+
+    # 4. 일괄 예측 (단 한 번의 predict 호출로 속도 극대화)
+    print("메탄(CH4) 발생량을 예측합니다...")
+    predictions = model.predict(X)
+    
+    # 예측된 값을 DataFrame에 추가
+    df['predicted_value'] = predictions
+
+    # 5. DB 일괄 저장을 위한 객체 리스트 생성
+    ch4_objects = []
+    for _, row in df.iterrows():
+        ch4_objects.append(
+            CH4PredictionValue(
+                env_data_id=int(row['env_data_id']),
+                value=row['predicted_value']
+            )
+        )
+
+    # 6. 데이터베이스 일괄 저장 및 업데이트
+    print("예측 결과를 데이터베이스에 저장합니다...")
+    CH4PredictionValue.objects.bulk_create(
+        ch4_objects,
+        update_conflicts=True,
+        unique_fields=['env_data'],
+        update_fields=['value']
+    )
+    
+    print(f"총 {len(ch4_objects)}개의 CH4 예측값이 업데이트/생성 되었습니다.")
