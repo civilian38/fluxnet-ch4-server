@@ -1,19 +1,33 @@
-from django.shortcuts import get_object_or_404
+from rest_framework import viewsets
+from rest_framework_gis.filters import InBBoxFilter
+from .models import Location
+from .serializers import (
+    LocationMapSerializer, 
+    LocationDetailSerializer, 
+    LocationCreateSerializer
+)
+from .permissions import IsAdminUserOrReadOnly
 
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
+class LocationViewSet(viewsets.ModelViewSet):
+    queryset = Location.objects.all()
 
-from .models import WeeklyEnvironmentData
-from .services import predict_ch4_for_instance
+    permission_classes = [IsAdminUserOrReadOnly]
+    
+    bbox_filter_field = 'point'
+    filter_backends = (InBBoxFilter, )
+    pagination_class = None 
 
-class ModelPredictionTestAPIView(APIView):
-    permission_classes = [AllowAny, ]
-
-    def get(self, request, env_id):
-        env_object = get_object_or_404(WeeklyEnvironmentData, id=env_id)
-        prediction = predict_ch4_for_instance(env_object)
-        return Response({'value': prediction}, status=status.HTTP_200_OK)
-
-
+    def get_serializer_class(self):
+        if self.action == 'list':
+            # GET /api/prediction/locations/
+            return LocationMapSerializer
+        
+        if self.action == 'retrieve':
+            # GET /api/prediction/locations/{id}/
+            return LocationDetailSerializer
+            
+        if self.action in ['create', 'update', 'partial_update']:
+            # POST, PUT, PATCH 요청
+            return LocationCreateSerializer
+            
+        return super().get_serializer_class()
