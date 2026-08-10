@@ -1,0 +1,119 @@
+## CH4 시계열 추이 조회
+
+* **URL:** `/api/prediction/locations/{id}/ch4_trend/`
+* **Method:** `GET`
+* **Description:** 특정 Location의 최근 기간 동안의 CH4 예측값 시계열 데이터를 시간순(오름차순)으로 조회합니다. 마커 클릭 시 간략한 추이 그래프를 렌더링하는 데 사용됩니다.
+
+### Path Parameters
+
+| 파라미터 | 타입 | 필수 여부 | 설명 |
+| --- | --- | --- | --- |
+| `id` | Integer | **Required** | 조회할 Location의 고유 ID |
+
+### Query Parameters
+
+| 파라미터 | 타입 | 필수 여부 | 설명 |
+| --- | --- | --- | --- |
+| `months` | Integer | Optional | 조회할 최근 개월 수 (기본값: `3`) |
+
+### Request Example
+
+```http
+GET /api/prediction/locations/5/ch4_trend/?months=3
+
+```
+
+### Response Example (200 OK)
+
+```json
+[
+  {
+    "date": "2024-05-01",
+    "ch4_value": 0.045
+  },
+  {
+    "date": "2024-05-08",
+    "ch4_value": 0.052
+  },
+  {
+    "date": "2024-05-15",
+    "ch4_value": 0.048
+  }
+]
+
+```
+
+---
+
+## 상세 환경 변수 추이 조회
+
+* **URL:** `/api/prediction/locations/{id}/environment_trend/`
+* **Method:** `GET`
+* **Description:** 특정 Location의 기상(ERA5) 및 위성(Sentinel-1) 환경 데이터와 CH4 예측값을 조회합니다. 쿼리 파라미터(`fields`)를 통해 필요한 데이터만 선별적으로 요청하여 트래픽을 최적화할 수 있습니다.
+
+### Path Parameters
+
+| 파라미터 | 타입 | 필수 여부 | 설명 |
+| --- | --- | --- | --- |
+| `id` | Integer | **Required** | 조회할 Location의 고유 ID |
+
+### Query Parameters
+
+| 파라미터 | 타입 | 필수 여부 | 설명 |
+| --- | --- | --- | --- |
+| `end_date` | String | Optional | 조회 종료일 (`YYYY-MM-DD` 형식). 지정하지 않을 경우 **오늘 날짜**가 기본값으로 적용됩니다. |
+| `start_date` | String | Optional | 조회 시작일 (`YYYY-MM-DD` 형식). 지정하지 않을 경우 **end_date로부터 6개월 전 날짜**가 기본값으로 적용됩니다. |
+| `fields` | String | Optional | 쉼표(`,`)로 구분된 조회 희망 필드 목록. 입력하지 않으면 모든 필드가 반환됩니다. |
+
+> **사용 가능한 `fields` 목록:**
+> * `ch4_value`: CH4 예측값
+> * 기상 데이터: `ws`(풍속), `ta`(기온), `ts_1`(지표면 온도), `ts_2`(토양 온도), `g`(지중열류량), `pa`(지표면 기압), `p`(총 강수량), `vpd`(대기차 건조도), `netrad`(순 복사량)
+> * 위성 데이터: `vv`(VV 편파), `vh`(VH 편파), `sdwi`(수분 지수)
+> 
+> 
+
+### Request Example
+
+**시나리오:** 2024년 1월 1일부터 6월 1일까지의 **기온(`ta`)**, **풍속(`ws`)**, CH4 예측값(`ch4_value`)만 조회
+
+```http
+GET /api/prediction/locations/5/environment_trend/?start_date=2024-01-01&end_date=2024-06-01&fields=ta,ws,ch4_value
+
+```
+
+### Response Example (200 OK)
+
+```json
+[
+  {
+    "date": "2024-01-01",
+    "ta": 12.5,
+    "ws": 3.2,
+    "ch4_value": 0.05
+  },
+  {
+    "date": "2024-01-08",
+    "ta": 10.1,
+    "ws": 2.8,
+    "ch4_value": 0.06
+  },
+  {
+    "date": "2024-01-15",
+    "ta": -2.3,
+    "ws": 5.1,
+    "ch4_value": 0.03
+  }
+]
+
+```
+
+### Error Responses
+
+* **`404 Not Found`**
+요청한 `id`에 해당하는 Location이 존재하지 않을 경우 발생합니다.
+```json
+{
+    "detail": "Not found."
+}
+
+```

@@ -68,10 +68,12 @@ class LocationAdminForm(forms.ModelForm):
 class LocationAdmin(GISModelAdmin):
     form = LocationAdminForm  # 위에서 만든 폼 적용
 
-    # 폼 화면에 보여질 필드 순서 (이름 -> 위도 -> 경도 -> 지도)
-    fields = ('name', 'latitude', 'longitude', 'point')
+    readonly_fields = ('id',) 
+    
+    fields = ('id', 'name', 'latitude', 'longitude', 'point') 
 
-    list_display = ('name', 'display_coordinates', 'created_at')
+    list_display = ('id', 'name', 'display_coordinates', 'created_at') 
+    
     search_fields = ('name',)
 
     gis_widget_kwargs = {

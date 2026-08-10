@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from django.contrib.gis.geos import Point # Point 객체 생성용
-from .models import Location
+from .models import Location, WeeklyEnvironmentData
 
 # 1. 지도 마커 렌더링용 (가벼운 GeoJSON)
 class LocationMapSerializer(GeoFeatureModelSerializer):
@@ -54,3 +54,12 @@ class LocationCreateSerializer(serializers.ModelSerializer):
             ret['latitude'] = instance.point.y
             ret['longitude'] = instance.point.x
         return ret
+
+class CH4TrendSerializer(serializers.ModelSerializer):
+    # OneToOne 필드인 prediction_value에서 value 값만 추출
+    ch4_value = serializers.FloatField(source='prediction_value.value', read_only=True)
+    date = serializers.DateField(source='start_date')
+
+    class Meta:
+        model = WeeklyEnvironmentData
+        fields = ['date', 'ch4_value']

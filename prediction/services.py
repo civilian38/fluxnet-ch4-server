@@ -4,10 +4,12 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 import zipfile
+import random
 import glob
 import ee
 from tqdm.auto import tqdm
 import datetime
+from datetime import timedelta
 import shutil
 import json
 from google.oauth2 import service_account
@@ -399,3 +401,70 @@ def update_ch4_for_locations(date: datetime.date):
     )
     
     print(f"총 {len(ch4_objects)}개의 CH4 예측값이 업데이트/생성 되었습니다.")
+
+def inject_bulk_data():
+    test_location = Location.objects.get(id=4)
+    
+    # 1. 기준이 되는 현재 데이터 가져오기 
+    # 모델의 ordering=['-start_date'] 속성 덕분에 first()로 가장 최근 데이터를 가져옵니다.
+    current_env = test_location.weekly_data.first()
+    
+    if not current_env:
+        print("기준이 되는 WeeklyEnvironmentData가 존재하지 않습니다.")
+        return
+        
+    try:
+        current_ch4 = current_env.prediction_value
+    except CH4PredictionValue.DoesNotExist:
+        print("기준이 되는 CH4PredictionValue가 존재하지 않습니다.")
+        return
+
+    # 노이즈(변화량)를 추가하는 헬퍼 함수
+    def get_varied_value(value, variation_range=1.0, min_zero=False):
+        new_value = value + random.uniform(-variation_range, variation_range)
+        if min_zero:
+            return round(max(0.0, new_value), 3)
+        return round(new_value, 3)
+
+    # 루프 안에서 이전 상태를 추적하기 위한 변수
+    prev_env = current_env
+    prev_ch4_val = current_ch4.value
+
+    # 30개의 생성 쿼리가 발생하므로 하나의 트랜잭션으로 묶어 처리 속도 향상
+    with transaction.atomic():
+        for _ in range(30):
+            # 2. 날짜는 1주일(7일) 이전으로 설정
+            new_start_date = prev_env.start_date - timedelta(days=7)
+            new_end_date = prev_env.end_date - timedelta(days=7)
+            
+            # 각 필드에 랜덤한 숫자 더하거나 빼기 (데이터 특성에 따라 변화 폭 지정)
+            new_env = WeeklyEnvironmentData.objects.create(
+                location=test_location,
+                start_date=new_start_date,
+                end_date=new_end_date,
+                
+                ws=get_varied_value(prev_env.ws, 0.5, min_zero=True),  # 풍속 (0 이상)
+                ta=get_varied_value(prev_env.ta, 2.0),
+                ts_1=get_varied_value(prev_env.ts_1, 2.0),
+                ts_2=get_varied_value(prev_env.ts_2, 2.0),
+                g=get_varied_value(prev_env.g, 5.0),
+                pa=get_varied_value(prev_env.pa, 0.5),
+                p=get_varied_value(prev_env.p, 5.0, min_zero=True),    # 강수량 (0 이상)
+                vpd=get_varied_value(prev_env.vpd, 0.5),
+                netrad=get_varied_value(prev_env.netrad, 10.0),
+                vv=get_varied_value(prev_env.vv, 1.0),
+                vh=get_varied_value(prev_env.vh, 1.0),
+                sdwi=get_varied_value(prev_env.sdwi, 0.05)             # 수분 지수
+            )
+            
+            # 새로운 CH4 예측값 생성 및 연결
+            new_ch4_val = get_varied_value(prev_ch4_val, 1.5)
+            CH4PredictionValue.objects.create(
+                env_data=new_env,
+                value=new_ch4_val
+            )
+            
+            # 다음 반복을 위해 기준 값을 방금 생성한 객체로 업데이트
+            prev_env = new_env
+
+    print("30개의 과거 테스트 데이터가 성공적으로 생성되었습니다.")
