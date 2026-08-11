@@ -1,6 +1,12 @@
-from django.urls import path
-from .views import ModelPredictionTestAPIView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import LocationViewSet
+
+app_name = 'prediction'
+
+router = DefaultRouter()
+router.register(r'locations', LocationViewSet, basename='location')
 
 urlpatterns = [
-    # path('<int:env_id>/', ModelPredictionTestAPIView.as_view(), name='model-test'),
+    path('', include(router.urls)),
 ]
