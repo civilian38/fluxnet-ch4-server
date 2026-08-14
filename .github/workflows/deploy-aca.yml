@@ -1,0 +1,83 @@
+name: Build and Deploy to Azure Container Apps
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # 1. 코드 체크아웃
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. GHCR 로그인 (PAT가 필요 없는 방식)
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.IMAGE_REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # setup driver
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3. Docker 이미지 빌드 및 푸시
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 4. Azure 로그인
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 5. [배포 1] Web 컨테이너 앱 업데이트
+      - name: Deploy to Azure Container App (Web)
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: ${{ secrets.ACA_WEB_APP_NAME }}
+          resourceGroup: ${{ secrets.ACA_RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          registryUrl: ${{ env.IMAGE_REGISTRY }}
+          registryUsername: ${{ github.repository_owner }}
+          registryPassword: ${{ secrets.GHCR_PAT }}
+
+      # 6. [배포 2] Celery 컨테이너 앱 업데이트
+      - name: Deploy to Azure Container App (Celery)
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: ${{ secrets.ACA_CELERY_APP_NAME }}
+          resourceGroup: ${{ secrets.ACA_RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          registryUrl: ${{ env.IMAGE_REGISTRY }}
+          registryUsername: ${{ github.repository_owner }}
+          registryPassword: ${{ secrets.GHCR_PAT }}
+
+      # 7. [배포 3] Celery Beat 컨테이너 앱 업데이트
+      - name: Deploy to Azure Container App (Celery Beat)
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: ${{ secrets.ACA_CELERY_BEAT_NAME }}
+          resourceGroup: ${{ secrets.ACA_RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          registryUrl: ${{ env.IMAGE_REGISTRY }}
+          registryUsername: ${{ github.repository_owner }}
+          registryPassword: ${{ secrets.GHCR_PAT }}
