@@ -7,7 +7,7 @@ on:
 
 env:
   IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
-  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  IMAGE_REGISTRY: ghcr.io
 
 jobs:
   build-and-deploy:
@@ -21,13 +21,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. GHCR 로그인 (PAT가 필요 없는 방식)
+      # 리포지토리 오너 이름을 소문자로 변환 (대문자로 인한 Push 에러 방지)
+      - name: Lowercase repository owner
+        run: echo "REPO_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> ${GITHUB_ENV}
+
+      # 2. GHCR 로그인 (GITHUB_TOKEN 대신 쓰기 권한이 확실한 GHCR_PAT 사용)
       - name: Log in to GHCR
         uses: docker/login-action@v2
         with:
           registry: ${{ env.IMAGE_REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.REPO_OWNER }}
+          password: ${{ secrets.GHCR_PAT }}
 
       # setup driver
       - name: Set up Docker Buildx
@@ -39,7 +43,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          tags: ${{ env.IMAGE_REGISTRY }}/${{ env.REPO_OWNER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -55,9 +59,9 @@ jobs:
         with:
           containerAppName: ${{ secrets.ACA_WEB_APP_NAME }}
           resourceGroup: ${{ secrets.ACA_RESOURCE_GROUP }}
-          imageToDeploy: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          imageToDeploy: ${{ env.IMAGE_REGISTRY }}/${{ env.REPO_OWNER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           registryUrl: ${{ env.IMAGE_REGISTRY }}
-          registryUsername: ${{ github.repository_owner }}
+          registryUsername: ${{ env.REPO_OWNER }}
           registryPassword: ${{ secrets.GHCR_PAT }}
 
       # 6. [배포 2] Celery 컨테이너 앱 업데이트
@@ -66,9 +70,9 @@ jobs:
         with:
           containerAppName: ${{ secrets.ACA_CELERY_APP_NAME }}
           resourceGroup: ${{ secrets.ACA_RESOURCE_GROUP }}
-          imageToDeploy: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          imageToDeploy: ${{ env.IMAGE_REGISTRY }}/${{ env.REPO_OWNER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           registryUrl: ${{ env.IMAGE_REGISTRY }}
-          registryUsername: ${{ github.repository_owner }}
+          registryUsername: ${{ env.REPO_OWNER }}
           registryPassword: ${{ secrets.GHCR_PAT }}
 
       # 7. [배포 3] Celery Beat 컨테이너 앱 업데이트
@@ -77,7 +81,7 @@ jobs:
         with:
           containerAppName: ${{ secrets.ACA_CELERY_BEAT_NAME }}
           resourceGroup: ${{ secrets.ACA_RESOURCE_GROUP }}
-          imageToDeploy: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          imageToDeploy: ${{ env.IMAGE_REGISTRY }}/${{ env.REPO_OWNER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           registryUrl: ${{ env.IMAGE_REGISTRY }}
-          registryUsername: ${{ github.repository_owner }}
+          registryUsername: ${{ env.REPO_OWNER }}
           registryPassword: ${{ secrets.GHCR_PAT }}
