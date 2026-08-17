@@ -33,8 +33,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     'localhost',
-    'https://refactored-funicular-4697j46v9j6fj9v5-8000.app.github.dev',
-    'https://fluxnet-web.delightfulisland-8239f9f6.koreacentral.azurecontainerapps.io'
+    'refactored-funicular-4697j46v9j6fj9v5-8000.app.github.dev',
+    'fluxnet-web.delightfulisland-8239f9f6.koreacentral.azurecontainerapps.io'
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True
