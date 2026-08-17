@@ -32,14 +32,15 @@ SECRET_KEY = "django-insecure-ne4%&rso4jy$1df45e#_(v$)b3dm*q9&ob6vu_q@)j)f6ri+^9
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '*'
+    'localhost',
+    'https://refactored-funicular-4697j46v9j6fj9v5-8000.app.github.dev',
+    'https://fluxnet-web.delightfulisland-8239f9f6.koreacentral.azurecontainerapps.io'
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True
 
 CSRF_TRUSTED_ORIGINS = [
     'https://localhost:8000',
-    'https://fluxnet-server-c4g0fbamd6cdhzdf.koreacentral-01.azurewebsites.net'
 ]
 
 # Application definition
@@ -161,6 +162,6 @@ CELERY_TIMEZONE = 'Asia/Seoul'
 CELERY_BEAT_SCHEDULE = {
     'ch4_weekly_update': {
         'task': 'prediction.tasks.ch4_weekly_update', 
-        'schedule': crontab(hour=9, minute=0, day_of_week='monday'), 
+        'schedule': crontab(hour=17, minute=0, day_of_week='monday'), 
     },
 }
