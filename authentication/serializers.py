@@ -21,3 +21,10 @@ class FCUserRegisterSerializer(serializers.ModelSerializer):
             is_admin=False
         )
         return user
+
+class FCUserInformationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FCUser
+        fields = ('nickname', 'is_admin')
+        read_only_fields = fields
