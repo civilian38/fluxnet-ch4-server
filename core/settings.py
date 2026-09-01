@@ -162,6 +162,6 @@ CELERY_TIMEZONE = 'Asia/Seoul'
 CELERY_BEAT_SCHEDULE = {
     'ch4_weekly_update': {
         'task': 'prediction.tasks.ch4_weekly_update', 
-        'schedule': crontab(hour=18, minute=35, day_of_week='monday'), 
+        'schedule': crontab(hour=18, minute=35), 
     },
 }
