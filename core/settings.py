@@ -37,7 +37,11 @@ ALLOWED_HOSTS = [
     'fluxnet-web.delightfulisland-8239f9f6.koreacentral.azurecontainerapps.io'
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "https://humble-guide-vw7v64wrwrrcxprw-5173.app.github.dev",
+    "http://localhost:8000",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://localhost:8000',
@@ -62,8 +66,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -162,6 +166,6 @@ CELERY_TIMEZONE = 'Asia/Seoul'
 CELERY_BEAT_SCHEDULE = {
     'ch4_weekly_update': {
         'task': 'prediction.tasks.ch4_weekly_update', 
-        'schedule': crontab(hour=20, minute=00), 
+        'schedule': crontab(hour=20, minute=00, day_of_week='monday'), 
     },
 }
