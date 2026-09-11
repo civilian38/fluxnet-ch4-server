@@ -1,6 +1,7 @@
 import datetime
 from dateutil.relativedelta import relativedelta
 
+from rest_framework import filters
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -20,11 +21,10 @@ from .models import Location
 
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
-
     permission_classes = [IsAdminUserOrReadOnly]
-    
     bbox_filter_field = 'point'
-    filter_backends = (InBBoxFilter, )
+    filter_backends = (InBBoxFilter, filters.SearchFilter) 
+    search_fields = ['name']
     pagination_class = None 
 
     def get_serializer_class(self):
