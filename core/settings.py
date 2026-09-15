@@ -32,6 +32,7 @@ SECRET_KEY = "django-insecure-ne4%&rso4jy$1df45e#_(v$)b3dm*q9&ob6vu_q@)j)f6ri+^9
 DEBUG = True
 
 ALLOWED_HOSTS = [
+    '127.0.0.1',
     'localhost',
     'refactored-funicular-4697j46v9j6fj9v5-8000.app.github.dev',
     'fluxnet-web.delightfulisland-8239f9f6.koreacentral.azurecontainerapps.io'
@@ -59,6 +60,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_yasg",
     "django.contrib.gis",
+    "leaflet",
     "rest_framework",
     "rest_framework_gis",
     "authentication",
@@ -168,4 +170,15 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'prediction.tasks.ch4_weekly_update', 
         'schedule': crontab(hour=20, minute=00, day_of_week='monday'), 
     },
+}
+
+MAP_URL = os.getenv("MAP_URL")
+LEAFLET_CONFIG = {
+    'DEFAULT_CENTER': (37.0, 127.0),
+    'DEFAULT_ZOOM': 7,
+    'TILES': [
+        ('CartoDB',
+         MAP_URL,
+         '© <a href="https://carto.com/attributions">CARTO</a>')
+    ],
 }
